@@ -29,7 +29,7 @@ def build_AE(input_dim=6400, encoding_dims=3*[256]):
     sgd = SGD(lr=0.2, momentum=0.95, decay=0.0, nesterov=False)
     model = Model(inputs=input_layer, outputs=decoded)
     model.compile(optimizer=sgd, loss='binary_crossentropy')
-    print model.summary()
+    print(model.summary())
 
     return model
 
@@ -46,7 +46,7 @@ def build_MDA(input_dims=6*[6400], encoding_dims=3*[512]):
     # hidden layers
     hidden_layers = []
     for j in range(0, len(input_dims)):
-        hidden_layers.append(Dense(encoding_dims[0]/len(input_dims),
+        hidden_layers.append(Dense(encoding_dims[0]//len(input_dims),
                                    activation='sigmoid')(input_layers[j]))
 
     # Concatenate layers
@@ -57,7 +57,7 @@ def build_MDA(input_dims=6*[6400], encoding_dims=3*[512]):
 
     # middle layers
     for i in range(1, len(encoding_dims)-1):
-        if i == len(encoding_dims)/2:
+        if i == len(encoding_dims)//2:
             hidden_layer = Dense(encoding_dims[i],
                                  name='middle_layer',
                                  activation='sigmoid')(hidden_layer)
@@ -73,7 +73,7 @@ def build_MDA(input_dims=6*[6400], encoding_dims=3*[512]):
     # hidden layers
     hidden_layers = []
     for j in range(0, len(input_dims)):
-        hidden_layers.append(Dense(encoding_dims[-1]/len(input_dims),
+        hidden_layers.append(Dense(encoding_dims[-1]//len(input_dims),
                                    activation='sigmoid')(hidden_layer))
     # output layers
     output_layers = []
@@ -85,6 +85,6 @@ def build_MDA(input_dims=6*[6400], encoding_dims=3*[512]):
     sgd = SGD(lr=0.2, momentum=0.95, decay=0.0, nesterov=False)
     model = Model(inputs=input_layers, outputs=output_layers)
     model.compile(optimizer=sgd, loss='binary_crossentropy')
-    print model.summary()
+    print(model.summary())
 
     return model
