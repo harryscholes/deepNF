@@ -12,7 +12,7 @@ def build_AE(input_dim=6400, encoding_dims=3*[256]):
     hidden_layer = input_layer
     for i in range(0, len(encoding_dims)):
         # generate hidden layer
-        if i == len(encoding_dims)/2:
+        if i == len(encoding_dims)//2:
             hidden_layer = Dense(encoding_dims[i],
                                  activation='sigmoid',
                                  name='middle_layer')(hidden_layer)
