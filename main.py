@@ -1,3 +1,16 @@
+'''
+Run deepNF
+
+To run:
+    python main.py example_params.txt
+
+    Legion:
+        qsub -b y -N deepNFgpu -pe smp 8 -l h_rt=12:0:0,mem=30G,gpu=1 -ac allow=P python $HOME/git/deepNF/main.py $HOME/git/deepNF/example_params.txt
+
+        qsub -b y -N deepNF -pe smp 8 -l h_rt=12:0:0,mem=30G python $HOME/git/deepNF/main.py $HOME/git/deepNF/example_params.txt
+'''
+
+
 import os
 os.environ["KERAS_BACKEND"] = "tensorflow"
 from pathlib import Path
@@ -12,23 +25,30 @@ import matplotlib.pyplot as plt
 import scipy.io as sio
 import pickle
 import sys
+import os
+
+
+def mkdir(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+mkdir("models")
+mkdir("results")
 
 
 def read_params(fname):
     params = {}
     fR = open(fname, 'r')
     for line in fR:
-        print line.strip()
+        print(line.strip())
         key, val = line.strip().split('=')
         key = str(key)
         val = str(val)
         if key == 'select_arch':
-            params[key] = map(int, val.strip('[]').split(','))
+            params[key] = list(map(int, val.strip('[]').split(',')))
         else:
             params[key] = str(val)
-    print "###############################################################"
-    print
-    print
+    print("###############################################################")
     fR.close()
 
     return params
@@ -46,6 +66,7 @@ ofile_keywords = params['ofile_keywords']  # {example: 'final_res'}
 models_path = params['models_path']  # directory with models
 results_path = params['results_path']  # directotry with results
 select_arch = params['select_arch']  # a number 1-6 (see below)
+print(select_arch)
 epochs = int(params['epochs'])
 batch_size = int(params['batch_size'])
 n_trials = int(params['n_trials'])  # number of cv trials
@@ -72,7 +93,7 @@ if model_type == 'mda':
                 6: [6*2500, 6*2000, 6*1500, 6*1000, 1200, 6*1000, 6*1500, 6*2000, 6*2500]
                 }
     else:
-        print "### Wrong organism!"
+        print("### Wrong organism!")
 elif model_type == 'ae':
     if org == 'yeast':
         arch = {1: [600],
@@ -87,12 +108,12 @@ elif model_type == 'ae':
                 4: [2500, 1500, 1000, 1200, 1000, 1500, 2500]
                 }
     else:
-        print "### Wrong organism!"
+        print("### Wrong organism!")
 else:
-    print "### Wrong model type!"
+    print("### Wrong model type!")
 
 
-arch = dict((key, a) for key, a in arch.iteritems() if key in select_arch)
+arch = dict((key, a) for key, a in arch.items() if key in select_arch)
 
 # measures
 measures = ['m-aupr_avg', 'm-aupr_std', 'M-aupr_avg', 'M-aupr_std',
@@ -105,7 +126,7 @@ if org == 'yeast':
     elif valid_type == 'th':
         annot = ['MF', 'BP', 'CC']
     else:
-        print "### Wrong valid_type!"
+        print("### Wrong valid_type!")
 elif org == 'human':
     if valid_type == 'cv':
         annot = ['bp_1', 'bp_2', 'bp_3',
@@ -114,39 +135,39 @@ elif org == 'human':
     elif valid_type == 'th':
         annot = ['MF', 'BP', 'CC']
     else:
-        print "### Wrong valid_type!"
+        print("### Wrong valid_type!")
 else:
-    print "### Wrong organism!"
+    print("### Wrong organism!")
 
 
 # load GO annotations
-if valid_type == 'cv':
-    GO = sio.loadmat('./annotations/' + org + '_annotations.mat')
-elif valid_type == 'th':
-    Annot = sio.loadmat('./annotations/' + org + '_annot_temporal_holdout.mat', squeeze_me=True)
-    fRead = open('./annotations/th_trials_' + org + '.pckl', 'rb')
-    Bootstrap = pickle.load(fRead)
-    fRead.close()
-else:
-    print "### Wrong validation type!"
+# if valid_type == 'cv':
+#     GO = sio.loadmat('./annotations/' + org + '_annotations.mat')
+# elif valid_type == 'th':
+#     Annot = sio.loadmat('./annotations/' + org + '_annot_temporal_holdout.mat', squeeze_me=True)
+#     fRead = open('./annotations/th_trials_' + org + '.pckl', 'rb')
+#     Bootstrap = pickle.load(fRead)
+#     fRead.close()
+# else:
+#     print("### Wrong validation type!"
 
 
 # load networks
 Nets = []
 input_dims = []
 for i in range(1, 7):
-    print "### [%d] Loading network..." % (i)
-    N = sio.loadmat('./annotations/' + org + '_net_' + str(i) + '_K' + K + '_alpha' + alpha + '.mat', squeeze_me=True)
+    print("### [%d] Loading network..." % (i))
+    N = sio.loadmat(os.path.join(os.environ["AGAPEDATA"], "deepNF", org + '_net_' + str(i) + '_K' + K + '_alpha' + alpha + '.mat'), squeeze_me=True)
     Net = N['Net'].todense()
     Nets.append(minmax_scale(Net))
     input_dims.append(Net.shape[1])
 
-
+print(input_dims)
 # Training MDA/AE
 model_names = []
 if model_type == 'mda':
     for a in arch:
-        print "### [Model] Running for architecture: ", arch[a]
+        print("### [Model] Running for architecture: ", arch[a])
         model_name = org + '_' + model_type.upper() + '_arch_' + str(a) + '_' + ofile_keywords + '.h5'
         if mark == '--all':
             model = build_MDA(input_dims, arch[a])
@@ -167,9 +188,9 @@ if model_type == 'mda':
         model_names.append(model_name)
 elif model_type == 'ae':
     for a in arch:
-        print "### [Model] Running for architecture: ", arch[a]
+        print("### [Model] Running for architecture: ", arch[a])
         for i in range(0, len(Nets)):
-            print "### [Model 1] Running for network: ", i
+            print("### [Model 1] Running for network: ", i)
             model_name = org + '_net_' + str(i) + '_AE_arch_' + str(a) + '_' + ofile_keywords + '.h5'
             if mark == '--all':
                 model = build_AE(input_dims[i], arch[a])
@@ -187,84 +208,84 @@ elif model_type == 'ae':
                 plt.savefig(models_path + model_name + '_loss.png', bbox_inches='tight')
 
 else:
-    print "### Wrong model type!"
+    print("### Wrong model type!")
 
-filename = results_path + 'deepNF_' + model_type + '_' + ofile_keywords + '_' + valid_type + '_performance_' + org + '.txt'
-fout = open(filename, 'w')
-
+# filename = results_path + 'deepNF_' + model_type + '_' + ofile_keywords + '_' + valid_type + '_performance_' + org + '.txt'
+# fout = open(filename, 'w')
+#
 # Training SVM
-if model_type == 'mda':
-    for model_name in model_names:
-        print "### Running for: %s" % (model_name)
-        fout.write(model_name)
-        fout.write('\n')
-        my_file = Path(models_path + model_name)
-        if my_file.exists():
-            mid_model = load_model(models_path + model_name)
-        else:
-            print "### Model % s does not exist. Use 'mark=--all' to generate models." % (model_name)
-            break
-        mid_model = load_model(models_path + model_name)
-        features = mid_model.predict(Nets)
-        features = minmax_scale(features)
-        sio.savemat(models_path + model_name + '_features.mat', {'features': features})
-        for level in annot:
-            print "### Running for level: %s" % (level)
-            if valid_type == 'cv':
-                perf = cross_validation(features, GO[level],
-                                        n_trials=n_trials,
-                                        fname=results_path + model_name + '_' + level + '_' + valid_type + '_performance_trials.txt')
-                fout.write('%s' % (level))
-                for m in measures:
-                    fout.write(' %0.5f' % (perf[m]))
-                fout.write('\n')
-            else:
-                perf = temporal_holdout(features,
-                                        Annot['GO'][level].tolist(),
-                                        Annot['indx'][level].tolist(),
-                                        Bootstrap[level],
-                                        results_path + model_name + '_' + level + '_th_performance_trials.txt',
-                                        goterms=Annot['labels'][level].tolist(),
-                                        go_fname=results_path + model_name + '_' + level + '_th_performance_GOterms.txt')
-                fout.write('%s ' % (level))
-                for m in measures:
-                    fout.write('%0.5f ' % (perf[m]))
-                fout.write('\n')
-elif model_type == 'ae':
-    for a in arch:
-        print "### [Model] Running for architecture: ", arch[a]
-        for i in range(0, len(Nets)):
-            print "### [Model] Running for network: ", i
-            model_name = org + '_net_' + str(i) + '_AE_arch_' + str(a) + '_' + ofile_keywords + '.h5'
-            fout.write(model_name)
-            fout.write('\n')
-            model = load_model(models_path + model_name)
-            mid_model = Model(inputs=model.input, outputs=model.get_layer('middle_layer').output)
-            features = mid_model.predict(Nets[i])
-            features = minmax_scale(features)
-            for level in annot:
-                print "### Running for level: %s" % (level)
-                if valid_type == 'cv':
-                    perf = cross_validation(features, GO[level],
-                                            n_trials=n_trials,
-                                            fname=results_path + model_name + '_' + level + '_' + valid_type + '_performance_trials.txt')
-                    fout.write('%s ' % (level))
-                    for m in measures:
-                        fout.write('%0.5f ' % (perf[m]))
-                    fout.write('\n')
-                else:
-                    perf = temporal_holdout(features,
-                                            Annot['GO'][level].tolist(),
-                                            Annot['indx'][level].tolist(),
-                                            Bootstrap[level],
-                                            results_path + model_name + '_' + level + '_th_performance_trials.txt',
-                                            goterms=Annot['labels'][level].tolist(),
-                                            go_fname=results_path + model_name + '_' + level + '_th_performance_GOterms.txt')
-                    fout.write('%s ' % (level))
-                    for m in measures:
-                        fout.write('%0.5f ' % (perf[m]))
-                    fout.write('\n')
-else:
-    print "### Wrong model type!"
-
-fout.close()
+# if model_type == 'mda':
+#     for model_name in model_names:
+#         print("### Running for: %s" % (model_name)
+#         fout.write(model_name)
+#         fout.write('\n')
+#         my_file = Path(models_path + model_name)
+#         if my_file.exists():
+#             mid_model = load_model(models_path + model_name)
+#         else:
+#             print("### Model % s does not exist. Use 'mark=--all' to generate models." % (model_name)
+#             break
+#         mid_model = load_model(models_path + model_name)
+#         features = mid_model.predict(Nets)
+#         features = minmax_scale(features)
+#         sio.savemat(models_path + model_name + '_features.mat', {'features': features})
+#         for level in annot:
+#             print("### Running for level: %s" % (level)
+#             if valid_type == 'cv':
+#                 perf = cross_validation(features, GO[level],
+#                                         n_trials=n_trials,
+#                                         fname=results_path + model_name + '_' + level + '_' + valid_type + '_performance_trials.txt')
+#                 fout.write('%s' % (level))
+#                 for m in measures:
+#                     fout.write(' %0.5f' % (perf[m]))
+#                 fout.write('\n')
+#             else:
+#                 perf = temporal_holdout(features,
+#                                         Annot['GO'][level].tolist(),
+#                                         Annot['indx'][level].tolist(),
+#                                         Bootstrap[level],
+#                                         results_path + model_name + '_' + level + '_th_performance_trials.txt',
+#                                         goterms=Annot['labels'][level].tolist(),
+#                                         go_fname=results_path + model_name + '_' + level + '_th_performance_GOterms.txt')
+#                 fout.write('%s ' % (level))
+#                 for m in measures:
+#                     fout.write('%0.5f ' % (perf[m]))
+#                 fout.write('\n')
+# elif model_type == 'ae':
+#     for a in arch:
+#         print("### [Model] Running for architecture: ", arch[a]
+#         for i in range(0, len(Nets)):
+#             print("### [Model] Running for network: ", i
+#             model_name = org + '_net_' + str(i) + '_AE_arch_' + str(a) + '_' + ofile_keywords + '.h5'
+#             fout.write(model_name)
+#             fout.write('\n')
+#             model = load_model(models_path + model_name)
+#             mid_model = Model(inputs=model.input, outputs=model.get_layer('middle_layer').output)
+#             features = mid_model.predict(Nets[i])
+#             features = minmax_scale(features)
+#             for level in annot:
+#                 print("### Running for level: %s" % (level)
+#                 if valid_type == 'cv':
+#                     perf = cross_validation(features, GO[level],
+#                                             n_trials=n_trials,
+#                                             fname=results_path + model_name + '_' + level + '_' + valid_type + '_performance_trials.txt')
+#                     fout.write('%s ' % (level))
+#                     for m in measures:
+#                         fout.write('%0.5f ' % (perf[m]))
+#                     fout.write('\n')
+#                 else:
+#                     perf = temporal_holdout(features,
+#                                             Annot['GO'][level].tolist(),
+#                                             Annot['indx'][level].tolist(),
+#                                             Bootstrap[level],
+#                                             results_path + model_name + '_' + level + '_th_performance_trials.txt',
+#                                             goterms=Annot['labels'][level].tolist(),
+#                                             go_fname=results_path + model_name + '_' + level + '_th_performance_GOterms.txt')
+#                     fout.write('%s ' % (level))
+#                     for m in measures:
+#                         fout.write('%0.5f ' % (perf[m]))
+#                     fout.write('\n')
+# else:
+#     print("### Wrong model type!"
+#
+# fout.close()

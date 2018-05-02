@@ -17,7 +17,7 @@ def _load_network(filename, mtrx='adj'):
     print("### Loading [%s]..." % (filename))
     if mtrx == 'adj':
         i, j, val = np.loadtxt(filename).T
-        A = coo_matrix((val, (i, j)))
+        A = coo_matrix((val, (i, j)), shape=(5100, 5100))
         A = A.todense()
         A = np.squeeze(np.asarray(A))
         if A.min() < 0:
