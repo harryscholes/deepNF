@@ -94,7 +94,7 @@ def temporal_holdout(X, y, indx, bootstrap, fname, goterms=None, go_fname=None):
     gamma_range = 10.**np.arange(-3, 1)
 
     # pre-generating kernels
-    print "### Pregenerating kernels..."
+    print("### Pregenerating kernels...")
     K_rbf_train = {}
     K_rbf_test = {}
     K_rbf_valid = {}
@@ -102,8 +102,8 @@ def temporal_holdout(X, y, indx, bootstrap, fname, goterms=None, go_fname=None):
         K_rbf_train[gamma] = rbf_kernel(X_train, gamma=gamma)
         K_rbf_test[gamma] = rbf_kernel(X_test, X_train, gamma=gamma)
         K_rbf_valid[gamma] = rbf_kernel(X_valid, X_train, gamma=gamma)
-    print "### Done."
-    print "Train samples=%d; #Test samples=%d" % (y_train.shape[0], y_test.shape[0])
+    print("### Done.")
+    print("Train samples=%d; #Test samples=%d" % (y_train.shape[0], y_test.shape[0]))
 
     # parameter fitting
     C_opt = None
@@ -121,16 +121,15 @@ def temporal_holdout(X, y, indx, bootstrap, fname, goterms=None, go_fname=None):
                                         y_score_valid,
                                         y_pred_valid)
             micro_aupr = perf['m-aupr']
-            print "### gamma = %0.3f, C = %0.3f, AUPR = %0.3f" % (gamma, C, micro_aupr)
+            print("### gamma = %0.3f, C = %0.3f, AUPR = %0.3f" % (gamma, C, micro_aupr))
             if micro_aupr > max_aupr:
                 C_opt = C
                 gamma_opt = gamma
                 max_aupr = micro_aupr
-    print "### Optimal parameters: "
-    print "C_opt = %0.3f, gamma_opt = %0.3f" % (C_opt, gamma_opt)
-    print "### Train dataset: AUPR = %0.3f" % (max_aupr)
-    print
-    print "### Computing performance on test dataset..."
+    print("### Optimal parameters: ")
+    print("C_opt = %0.3f, gamma_opt = %0.3f" % (C_opt, gamma_opt))
+    print("### Train dataset: AUPR = %0.3f" % (max_aupr))
+    print("### Computing performance on test dataset...")
     clf = OneVsRestClassifier(svm.SVC(C=C_opt, kernel='precomputed',
                                       probability=False), n_jobs=-1)
     clf.fit(K_rbf_train[gamma_opt], y_train)
@@ -173,9 +172,9 @@ def temporal_holdout(X, y, indx, bootstrap, fname, goterms=None, go_fname=None):
 
     # trials
     fout = open(fname, 'w')
-    print>>fout, "aupr[micro], aupr[macro], F_max, accuracy"
+    fout.write("aupr[micro], aupr[macro], F_max, accuracy\n")
     for it in range(0, len(bootstrap)):
-        print>>fout, pr_micro[it], pr_macro[it], fmax[it], acc[it]
+        fout.write(pr_micro[it], pr_macro[it], fmax[it], acc[it], "\n")
     fout.close()
 
     # write performance on individual GO terms
@@ -204,11 +203,11 @@ def cross_validation(X, y, n_trials=5, trial_splits=None, fname=None):
     gamma_range = 10.**np.arange(-3, 1)
 
     # pre-generating kernels
-    print "### Pregenerating kernels..."
+    print("### Pregenerating kernels...")
     K_rbf = {}
     for gamma in gamma_range:
         K_rbf[gamma] = rbf_kernel(X, gamma=gamma)
-    print "### Done."
+    print("### Done.")
 
     # performance measures
     perf = dict()
@@ -232,9 +231,9 @@ def cross_validation(X, y, n_trials=5, trial_splits=None, fname=None):
         it += 1
         y_train = y[train_idx]
         y_test = y[test_idx]
-        print "### [Trial %d] Perfom cross validation...." % (it)
-        print "Train samples=%d; #Test samples=%d" % (y_train.shape[0],
-                                                      y_test.shape[0])
+        print("### [Trial %d] Perfom cross validation...." % (it))
+        print("Train samples=%d; #Test samples=%d" % (y_train.shape[0],
+                                                      y_test.shape[0]))
         # setup for neasted cross-validation
         splits = ml_split(y_train)
 
@@ -264,16 +263,15 @@ def cross_validation(X, y, n_trials=5, trial_splits=None, fname=None):
                                                    y_pred_valid)
                     cv_results.append(perf_cv['m-aupr'])
                 cv_aupr = np.median(cv_results)
-                print "### gamma = %0.3f, C = %0.3f, AUPR = %0.3f" % (gamma, C, cv_aupr)
+                print("### gamma = %0.3f, C = %0.3f, AUPR = %0.3f" % (gamma, C, cv_aupr))
                 if cv_aupr > max_aupr:
                     C_opt = C
                     gamma_opt = gamma
                     max_aupr = cv_aupr
-        print "### Optimal parameters: "
-        print "C_opt = %0.3f, gamma_opt = %0.3f" % (C_opt, gamma_opt)
-        print "### Train dataset: AUPR = %0.3f" % (max_aupr)
-        print
-        print "### Using full training data..."
+        print("### Optimal parameters: ")
+        print("C_opt = %0.3f, gamma_opt = %0.3f" % (C_opt, gamma_opt))
+        print("### Train dataset: AUPR = %0.3f" % (max_aupr))
+        print("### Using full training data...")
         clf = OneVsRestClassifier(svm.SVC(C=C_opt, kernel='precomputed',
                                           probability=False), n_jobs=-1)
         y_score = np.zeros(y_test.shape, dtype=float)
@@ -289,9 +287,7 @@ def cross_validation(X, y, n_trials=5, trial_splits=None, fname=None):
         pr_macro.append(perf_trial['M-aupr'])
         fmax.append(perf_trial['F1'])
         acc.append(perf_trial['acc'])
-        print "### Test dataset: AUPR['micro'] = %0.3f, AUPR['macro'] = %0.3f, F1 = %0.3f, Acc = %0.3f" % (perf_trial['m-aupr'], perf_trial['M-aupr'], perf_trial['F1'], perf_trial['acc'])
-        print
-        print
+        print("### Test dataset: AUPR['micro'] = %0.3f, AUPR['macro'] = %0.3f, F1 = %0.3f, Acc = %0.3f" % (perf_trial['m-aupr'], perf_trial['M-aupr'], perf_trial['F1'], perf_trial['acc']))
     perf['m-aupr_avg'] = np.mean(pr_micro)
     perf['m-aupr_std'] = std(pr_micro)
     perf['M-aupr_avg'] = np.mean(pr_macro)
@@ -303,9 +299,9 @@ def cross_validation(X, y, n_trials=5, trial_splits=None, fname=None):
 
     if fname is not None:
         fout = open(fname, 'w')
-        print>>fout, "aupr[micro], aupr[macro], F_max, accuracy"
+        fout.write("aupr[micro], aupr[macro], F_max, accuracy\n")
         for ii in range(0, n_trials):
-            print>>fout, pr_micro[ii], pr_macro[ii], fmax[ii], acc[ii]
+            fout.write(pr_micro[ii], pr_macro[ii], fmax[ii], acc[ii])
         fout.close()
 
     return perf
