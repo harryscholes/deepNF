@@ -11,6 +11,16 @@ To run:
 
     qsub -b y -N deepNF -pe smp 8 -l h_rt=2:0:0,mem=15G \
         python $HOME/git/deepNF/deepNF.py --architecture 2
+
+    CS:
+
+    qsub -b y -N deepNF_GPU
+        -pe smp 8 -l h_rt=2:0:0,h_vmem=7.8G,tmem=7.8G,gpu=1 \
+        -ac allow=P \
+        python $HOME/git/deepNF/deepNF.py --architecture 2
+
+    qsub -b y -N deepNF -pe smp 2 -l h_rt=2:0:0,h_vmem=7.8G,tmem=7.8G \
+        python $HOME/git/deepNF/deepNF.py --architecture 2
 '''
 
 
@@ -127,7 +137,8 @@ def plot_loss(history):
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'validation'], loc='upper left')
-    plt.savefig(models_path + model_name + '_loss.png', bbox_inches='tight')
+    plt.savefig(str(Path(models_path, model_name + '_loss.png')),
+                bbox_inches='tight')
 
 
 model_names = []
@@ -157,7 +168,7 @@ for a in architecture:
     plot_loss(history)
 
     with open(Path(models_path, 'training_history.pkl'), 'wb') as f:
-        pickle.dump(history.history, file_pi)
+        pickle.dump(history.history, f)
 
     # Extract middle layer
     mid_model = Model(
@@ -177,13 +188,12 @@ for model_name in model_names:
     my_file = Path(models_path, f"{model_name}.h5")
 
     if my_file.exists():
-        mid_model = load_model(models_path + model_name)
+        mid_model = load_model(my_file)
     else:
-        raise OSError("Model does not exist", model_name)
+        raise OSError("Model does not exist", my_file)
 
-    mid_model = load_model(models_path + f"{model_name}.h5")
     embeddings = minmax_scale(mid_model.predict(Nets))
 
     sio.savemat(
-        Path(results_path, model_name + '_features.mat',
-        {'embeddings': embeddings}))
+        str(Path(results_path, model_name + '_features.mat')),
+        {'embeddings': embeddings})
